@@ -96,6 +96,8 @@ services:
         context: .
         dockerfile: Dockerfile
       container_name: artisan
+      ports:
+        - "9090:9000"       
       volumes:
         - ./:/var/www
       depends_on:
