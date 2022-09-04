@@ -77,7 +77,7 @@ services:
       - ./:/var/www
     working_dir: /var/www
     depends_on:
-      - php
+      - applr9x
     networks:
       - applr9x-network
   #npm    
