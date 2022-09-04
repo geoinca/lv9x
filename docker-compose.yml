@@ -1,0 +1,125 @@
+version: '3'
+services:
+
+  #PHP Service
+  applr9x:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: geoincaks/php
+    container_name: applr9x
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "9000:9000"    
+    environment:
+      SERVICE_NAME: applr9x
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./conf/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - applr9x-network
+
+  #Nginx Service
+  webserverlr9x:
+    image: nginx:alpine
+    container_name: webserverlr9x
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./conf/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - applr9x-network
+
+  #MySQL Service
+  dblr9x:
+    image: mysql:5.7.22
+    container_name: dblr9x
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: mi_contrasena_aqui
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdatalr9x:/var/lib/mysql/
+      - ./conf/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - applr9x-network
+  #PHPmyadmin
+  dbadminlr9x:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - 8088:80
+    environment:
+        MYSQL_ROOT_PASSWORD: mi_contrasena_aqui
+        PMA_HOST: dblr9x
+    depends_on:
+      - dblr9x
+    networks:
+      - applr9x-network  
+  #composer
+  composer:
+    image: composer:latest
+    container_name: composer
+    volumes:
+      - ./:/var/www
+    working_dir: /var/www
+    depends_on:
+      - php
+    networks:
+      - applr9x-network
+  #npm    
+  npm:
+      image: node:16
+      container_name: npm
+      volumes:
+        - ./:/var/www
+      ports:
+        - "3000:3000"
+      working_dir: /var/www
+      entrypoint: ['npm']
+  #
+  artisan:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: artisan
+      volumes:
+        - ./:/var/www
+      depends_on:
+        - applr9x
+        - dblr9x
+      working_dir: /var/www
+      entrypoint: ['php', '/var/www/artisan']
+      networks:
+        - applr9x-network
+  redis:
+      image: redis:7-alpine
+      container_name: redis
+      restart: unless-stopped
+      tty: true
+      ports:
+      - "6379:6379"
+      networks:
+        - applr9x-network
+
+  #Docker Networks
+networks:
+  applr9x-network:
+    driver: bridge
+#Volumes
+volumes:
+  dbdatalr9x:
+    driver: local
